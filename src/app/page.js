@@ -11,6 +11,8 @@ export default function Home() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const API = process.env.NEXT_PUBLIC_API_URL
+
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -19,7 +21,7 @@ export default function Home() {
     setResult(null)
     // iniciar transcripción
     try {
-      const res = await fetch('/api/transcribe', {
+      const res = await fetch(`${API}/transcribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -43,7 +45,7 @@ export default function Home() {
     if (!taskId) return
     const iv = setInterval(async () => {
       try {
-        const res = await fetch(`/api/status/${taskId}`)
+        const res = await fetch(`${API}/status/${taskId}`)
         if (!res.ok) throw new Error(`${res.status}`)
         const data = await res.json()
         setStatus(data.status)
