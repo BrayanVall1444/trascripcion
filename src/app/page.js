@@ -11,23 +11,25 @@ export default function Home() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
-  const API = process.env.NEXT_PUBLIC_API_URL
 
+  // URL de tu FastAPI expuesta (Cloudflare Tunnel)
+  const API = process.env.NEXT_PUBLIC_API_URL
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!API) {
+      setError('❌ NEXT_PUBLIC_API_URL no está definida')
+      return
+    }
     setLoading(true)
     setError(null)
     setResult(null)
-    // iniciar transcripción
+
     try {
       const res = await fetch(`${API}/transcribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          video_url: url,
-          language_preference: lang || null
-        })
+        body: JSON.stringify({ video_url: url, language_preference: lang || null })
       })
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
       const { task_id, position } = await res.json()
@@ -40,9 +42,9 @@ export default function Home() {
     }
   }
 
-  // polling de estado
+  // Polling de estado
   useEffect(() => {
-    if (!taskId) return
+    if (!taskId || !API) return
     const iv = setInterval(async () => {
       try {
         const res = await fetch(`${API}/status/${taskId}`)
@@ -67,18 +69,19 @@ export default function Home() {
       }
     }, 3000)
     return () => clearInterval(iv)
-  }, [taskId])
+  }, [taskId, API])
 
   return (
     <div className="max-w-xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Transcribe tu video</h1>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block font-medium">URL del video</label>
           <input
             className="w-full border px-2 py-1"
             value={url}
-            onChange={e => setUrl(e.currentTarget.value)}
+            onChange={e => setUrl(e.target.value)}
             placeholder="https://youtu.be/..."
             required
           />
@@ -88,7 +91,7 @@ export default function Home() {
           <input
             className="w-full border px-2 py-1"
             value={lang}
-            onChange={e => setLang(e.currentTarget.value)}
+            onChange={e => setLang(e.target.value)}
             placeholder="es, en, pt..."
           />
         </div>
@@ -101,7 +104,11 @@ export default function Home() {
         </button>
       </form>
 
-      {error && <p className="mt-4 text-red-600">Error: {error}</p>}
+      {error && (
+        <p className="mt-4 text-red-600">
+          Error: {error}
+        </p>
+      )}
 
       {status && (
         <div className="mt-6">
@@ -115,9 +122,26 @@ export default function Home() {
       {result && (
         <div className="mt-6 space-y-4">
           <h2 className="text-xl font-semibold">Transcripción</h2>
-          <pre className="bg-gray-100 p-2 overflow-auto">{result.transcription}</pre>
+          <div className="relative group">
+            <pre className="bg-gray-100 p-2 overflow-auto">{result.transcription}</pre>
+            <button
+              onClick={() => navigator.clipboard.writeText(result.transcription)}
+              className="absolute top-1 right-1 text-sm opacity-0 group-hover:opacity-80 transition"
+            >
+              Copiar
+            </button>
+          </div>
+
           <h2 className="text-xl font-semibold">Corregido</h2>
-          <pre className="bg-gray-100 p-2 overflow-auto">{result.corrected}</pre>
+          <div className="relative group">
+            <pre className="bg-gray-100 p-2 overflow-auto">{result.corrected}</pre>
+            <button
+              onClick={() => navigator.clipboard.writeText(result.corrected)}
+              className="absolute top-1 right-1 text-sm opacity-0 group-hover:opacity-80 transition"
+            >
+              Copiar
+            </button>
+          </div>
         </div>
       )}
     </div>
